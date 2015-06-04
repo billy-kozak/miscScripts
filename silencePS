@@ -1,0 +1,19 @@
+#!/bin/bash
+###############################################################################
+# Redirects stderr and stdout of running process to /dev/null                 #
+###############################################################################
+
+GDB_SCRIPT='p dup2(open("/dev/null",0),1)
+	p dup2(open("/dev/null",0),2)
+	detach
+	quit'
+
+if [ $# -eq 1 ]; then
+	temp=$(mktemp silenceXXX.gdb)
+	echo "${GDB_SCRIPT}" > ${temp}
+	gdb -nx -batch -p "$1" -x ${temp} > /dev/null
+	rm $temp
+else
+ echo "Must specify PID of process to silence" >&2
+ exit 255
+fi
