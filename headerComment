@@ -27,20 +27,25 @@ import readline
 CommentStyle = namedtuple(
 		'CommentStyle',
 		('topLeft topFill topRight '
-		 'midLeft midRight '
-		 'botLeft botFill botRight')
+		 'midLeft midFill midRight '
+		 'botLeft botFill botRight ')
 	)
 
 STYLE_MAP={
 	'slashSplat':CommentStyle(
 			'/*','*','**',
-			'* ',    ' *',
+			'* ',' ',' *',
 			'**','*','*/',
 		),
 	'hash':CommentStyle(
-			'#','#','#',
-			'# ',    ' #',
-			'#','#','#',
+			 '##','#','##',
+			 '# ',' ',' #',
+			 '##','#','##',
+		),
+	'dash':CommentStyle(
+			'/*','-','*/',
+			'/*','-','*/',
+			'/*','-','*/',
 		)
 }
 
@@ -72,80 +77,82 @@ def wordSpaceSplit(s):
 					split.append(tok)
 				tok = c
 				inSpace = False
-	
+
 	if len(tok):
 		split.append(tok)
-	
+
 	return split
-				
+
 
 def makeLinesToWidth(text,cWidth):
 	"""Splits text into string of max width cWidth
-	
+
 	The split occurs along word boundaries unless a single word is larger
 	than the allowed width.
-	
+
 	Sections of whitespace may be removed if they occur at a character
 	width boundary. Trailing whitespace is ignored altogether.
 	"""
 	if cWidth <= 0:
 		raise ValueError('line width must be at least 1')
-		
+
 	if text == '':
 		return ['']
-	
+
 	lines = []
 	toks = wordSpaceSplit(text.rstrip())
 	line = ''
-	
+
 	for i in xrange(len(toks)):
-		
+
 		if ( len(line)+len(toks[i]) ) > cWidth:
-				
+
 			if len(line):
 				lines.append(line.rstrip())
 				line = ''
 				if toks[i].isspace():
 					continue
-		
+
 		if len(toks[i]) > cWidth:
 			for n in xrange(0,len(toks[i]),cWidth):
 				p = toks[i][n:n+cWidth]
 				lines.append(p)
 		else:
 			line += toks[i]
-	
+
 	if len(line):
 		lines.append(line)
-	
+
 	return lines
 
 def headerCommentTerm(left,right,fill,width):
 	"""Create a header comment entry or exit section
 	"""
-	if len(fill) != 1:
+	if len(fill) == 0:
+		return ''
+	if len(fill) > 1:
 		raise ValueError('Fill must be a single char!')
-	
+
 	fillLen = width-len(left)-len(right)
-	
+
 	if fillLen < 0:
 		raise ValueError('Line not long enough!')
-		
+
 	return left+fill*fillLen+right+'\n'
 
 
-def commentLines(left,right,text,width,centered=False):
+def commentLines(left,right,fill,text,width,centered=False):
 	"""Create header comment lines from the given input text
-	
+
 	left and right refer to strings which are placed at the start and
 	end of every line.
 	"""
-	
+
 	lineRoom = width - len(left) - len(right)
-	
+
 	if lineRoom <= 0:
 		raise ValueError('No room in lines for comment!\n')
-		
+
 	output = ''
 
 	for line in text.split('\n')[:-1]:
@@ -153,21 +160,21 @@ def commentLines(left,right,text,width,centered=False):
 			splits = makeLinesToWidth(line,lineRoom)
 		else:
 			splits = makeLinesToWidth(line.lstrip(),lineRoom)
-			
+
 		for s in splits:
 			spaces = lineRoom-len(s)
 			if not centered:
-				output += left+s+' '*spaces+right+'\n'
+				output += left+s+fill*spaces+right+'\n'
 			else:
 				spaceLeft = spaces/2
 				spaceRight = spaces-spaceLeft
 				output += (
-						left+' '*spaceLeft+
+						left+fill*spaceLeft+
 						s
-						+spaceRight*' '+right+
+						+spaceRight*fill+right+
 						'\n'
 					)
-		
+
 	return output
 
 def readInput():
@@ -175,31 +182,31 @@ def readInput():
 	"""
 	if not sys.stdin.isatty():
 		return sys.stdin.read()
-	
-	
+
+
 	text = ''
 	while True:
 		try:
 			text += raw_input('> ')+'\n'
 		except EOFError:
 			break
-		
+
 	sys.stdout.write('\n')
-	
+
 	return text
-		
-	
+
+
 
 def parseArgs():
 	"""Interpret command line arguments
-	
+
 	returns an object which shows the options selected by the user
 	"""
 	parser = argparse.ArgumentParser(
 			description=__doc__,
 			formatter_class=argparse.RawDescriptionHelpFormatter
 		)
-	
+
 	styleGroup = parser.add_mutually_exclusive_group()
 	styleGroup.add_argument(
 			'--slashSplat','-s',action='store_const',
@@ -217,7 +224,15 @@ def parseArgs():
 				' style comments'
 			)
 		)
-	
+	styleGroup.add_argument(
+			'--dash','-d',action='store_const',
+			const=STYLE_MAP['dash'],dest='style',
+			help=(
+				'Sets comment style to C style /* comments '
+				'all filled in by dashes'
+			)
+		)
+
 	justifyGroup = parser.add_mutually_exclusive_group()
 	justifyGroup.add_argument(
 			'--centre','-c',action='store_true',dest='centered',
@@ -231,7 +246,7 @@ def parseArgs():
 				'Makes comments left justified'
 			)
 		)
-	
+
 	parser.add_argument(
 			'--width',action='store',type=int,dest='width',
 			default=DEFAULT_COLUMN_WIDTH,
@@ -240,9 +255,9 @@ def parseArgs():
 				'comments. The default is %(default)d'
 				' characters'
 			)
-			
+
 		)
-	
+
 	parser.add_argument(
 			'--tabWidth',action='store',type=int,dest='tabWidth',
 			default=DEFAULT_TAB_WIDTH,
@@ -252,18 +267,18 @@ def parseArgs():
 				' default width is %(default)d.'
 			)
 		)
-	
+
 	parser.set_defaults(style=STYLE_MAP['slashSplat'],centered=True)
-	
+
 	args = parser.parse_args()
-	
+
 	if args.width <= 0:
 		parser.error('width must be greater than zero')
 		exit(-1)
 	elif args.tabWidth < 0:
 		parser.error('tab width must be non-negative')
 		exit(-1)
-	
+
 	return args
 
 if __name__ == '__main__':
@@ -271,9 +286,9 @@ if __name__ == '__main__':
 	"""
 	args = parseArgs()
 	text = readInput()
-	
+
 	text = text.expandtabs(args.tabWidth)
-	
+
 	try:
 		top = headerCommentTerm(
 				args.style.topLeft,args.style.topRight,
@@ -281,15 +296,16 @@ if __name__ == '__main__':
 			)
 		mid = commentLines(
 				args.style.midLeft,args.style.midRight,
+				args.style.midFill,
 				text,args.width,args.centered
 			)
 		bot = headerCommentTerm(
 				args.style.botLeft,args.style.botRight,
 				args.style.botFill,args.width
 			)
-		
+
 		sys.stdout.write(top+mid+bot)
-		
+
 	except Exception as e:
 		sys.stderr.write('Error: %s\n'%str(e))
 		exit(-1)
