@@ -33,20 +33,25 @@ CommentStyle = namedtuple(
 
 STYLE_MAP={
 	'slashSplat':CommentStyle(
-			'/*','*','**',
-			'* ',' ',' *',
-			'**','*','*/',
-		),
+		'/*','*','**',
+		'* ',' ',' *',
+		'**','*','*/',
+	),
 	'hash':CommentStyle(
-			 '##','#','##',
-			 '# ',' ',' #',
-			 '##','#','##',
-		),
+		 '##','#','##',
+		 '# ',' ',' #',
+		 '##','#','##',
+	),
 	'dash':CommentStyle(
-			'/*','-','*/',
-			'/*','-','*/',
-			'/*','-','*/',
-		)
+		'/*','-','*/',
+		'/*','-','*/',
+		'/*','-','*/',
+	),
+	'percent':CommentStyle(
+		'%%', '%', '%%',
+		'% ', ' ', ' %',
+		'%%', '%', '%%',
+	)
 }
 
 DEFAULT_COLUMN_WIDTH=79
@@ -230,6 +235,13 @@ def parseArgs():
 			help=(
 				'Sets comment style to C style /* comments '
 				'all filled in by dashes'
+			)
+		)
+	styleGroup.add_argument(
+			'--percent','-p',action='store_const',
+			const=STYLE_MAP['percent'],dest='style',
+			help=(
+				'Sets comment style to use % comments.'
 			)
 		)
 
