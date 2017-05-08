@@ -209,7 +209,8 @@ def parseArgs():
 	"""
 	parser = argparse.ArgumentParser(
 			description=__doc__,
-			formatter_class=argparse.RawDescriptionHelpFormatter
+			formatter_class=argparse.RawDescriptionHelpFormatter,
+			add_help = True
 		)
 
 	styleGroup = parser.add_mutually_exclusive_group()
@@ -241,7 +242,7 @@ def parseArgs():
 			'--percent','-p',action='store_const',
 			const=STYLE_MAP['percent'],dest='style',
 			help=(
-				'Sets comment style to use % comments.'
+				'Sets comment style to use %% comments.'
 			)
 		)
 
